@@ -21,21 +21,31 @@ int busca(char id_Container[12]  , container* cadastrados){
 }
 int cnpj_Confere(char cnpj_Container[12] , container* container_Triagem, int indice_Elemento)
 {
-
-    int comparacao = strcmp(container_Triagem[indice_Elemento].cnpj,cnpj_Container);
+    int comparacao = 0 + strcmp(container_Triagem[indice_Elemento].cnpj,cnpj_Container);
     return (comparacao == 0) ? 0 : 2;
 }
 
 void Calcula_excedente(container* cadastrado , container* triagem){
-    cadastrado->percentual_Excedido=0;
-    triagem->percentual_Excedido = (((cadastrado->peso)*100)/cadastrado->peso)-100;
+    triagem->percentual_Excedido = (((triagem->peso)*100)/cadastrado->peso)-100;
     if(triagem->percentual_Excedido>10 && triagem->prioridade!=2){triagem->prioridade=1;} //no intercalar, fazer logica para a maior diferença
 }
+void Trocar(container saida, container entrada) {
+    saida.indice_Lista = entrada.indice_Lista;
+    saida.peso = entrada.peso;
+    saida.percentual_Excedido = entrada.percentual_Excedido;
+    saida.prioridade = entrada.prioridade;
+
+    // Copiar id_Container e garantir terminação nula
+    strncpy(saida.id_Container, entrada.id_Container, sizeof(saida.id_Container) - 1);
+    saida.id_Container[sizeof(saida.id_Container) - 1] = '\0';
+
+    // Copiar cnpj e garantir terminação nula
+    strncpy(saida.cnpj, entrada.cnpj, sizeof(saida.cnpj) - 1);
+    saida.cnpj[sizeof(saida.cnpj) - 1] = '\0';
+}
 void Copiar_subarray(container* saida , container* entrada, int restantes){
-    while(restantes>0){
+        if(restantes>0)
         memcpy(saida, entrada, sizeof(container));
-        restantes--;
-    }
 }
 void Intercalar(container* saida , container* entrada, int32_t lim_Inferior , int32_t pivo, int32_t lim_Superior) {
     //indices
@@ -45,19 +55,21 @@ void Intercalar(container* saida , container* entrada, int32_t lim_Inferior , in
     //enquanto houver elementos
     while ( lim_Inf_Atual <= pivo && pivo_Sup <= lim_Superior ) {
         //pula quem está nos conformes
-        if(entrada[pivo_Sup].prioridade==0||entrada[lim_Inf_Atual].prioridade==0){
+        while(entrada[pivo_Sup].prioridade==0||entrada[lim_Inf_Atual].prioridade==0){
             if (entrada[lim_Inf_Atual].prioridade==0) lim_Inf_Atual++;
             if (entrada[pivo_Sup].prioridade==0) pivo_Sup++;
             }
         
-        //comparacao cnpj
-        if(entrada[pivo_Sup].prioridade ==2||entrada[lim_Inf_Atual].prioridade ==2)
-            (entrada[lim_Inf_Atual].prioridade==2)?(saida[indice++] = entrada[lim_Inf_Atual++]):(saida[indice++] = entrada[pivo_Sup++]);
-        
-        //comparação peso
-        else if(entrada[pivo_Sup].prioridade==1||entrada[lim_Inf_Atual].prioridade==1)
-            (entrada[lim_Inf_Atual].percentual_Excedido >= entrada[pivo_Sup].percentual_Excedido)?(saida[indice++] = entrada[lim_Inf_Atual++]):(saida[indice++] = entrada[pivo_Sup++]);
-    }
+        //comparacao maior prioridade
+        if(entrada[pivo_Sup].prioridade < entrada[lim_Inf_Atual].prioridade)
+            Trocar(saida[indice++],entrada[lim_Inf_Atual++]);
+        else if(entrada[pivo_Sup].prioridade > entrada[lim_Inf_Atual].prioridade)
+            Trocar(saida[indice++],entrada[pivo_Sup++]);
+
+        //prioridade igual
+        else { 
+            (entrada[lim_Inf_Atual].percentual_Excedido >= entrada[pivo_Sup].percentual_Excedido)?(Trocar(saida[indice++],entrada[lim_Inf_Atual++])):(Trocar(saida[indice++],entrada[pivo_Sup++]));
+    }}
     if(lim_Inferior>pivo) Copiar_subarray(&saida[indice], &entrada[pivo_Sup], lim_Superior-pivo_Sup+1);
     else Copiar_subarray(&saida[indice], &entrada[lim_Inf_Atual], pivo-lim_Inf_Atual+1);
     Copiar_subarray(&entrada[lim_Inferior],&saida[lim_Inferior], lim_Superior-lim_Inferior+1);
@@ -120,7 +132,7 @@ int main(int argc, char* argv[]){
     }
     mergesort(lista_Saida,lista_Triagem,lim_inf,lim_sup);
     int ind = 0;
-    while(lista_Triagem[ind].prioridade==2 ||lista_Triagem[ind].prioridade==1) fprintf(output,"%s\n",lista_Triagem[ind++].cnpj);
+    while(ind<index_Triagem) fprintf(output,"%s\n",lista_Triagem[ind++].id_Container);
     fclose(input);
     fclose(output);
     return 0;
