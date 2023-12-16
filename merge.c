@@ -11,24 +11,28 @@ typedef struct dados_Container {
     int prioridade, percentual_Excedido, diferenca;// cpf = 0
 } container;
 int Hashify(char* to_hash, int tamanho){
-    int hash,chave=0, tam_str=12;
-    for(int posicao=0;posicao<tam_str;posicao++){
-        chave += ((int)(to_hash[posicao]));
+    unsigned int hash = 0, posicao = 0;
+
+    while (posicao<12) {
+        hash = (hash * 13) + to_hash[posicao++];
+        
     }
-    if(chave%2==0)chave+=chave-1;
-    (chave<(tamanho*2))?(hash=chave):(hash=chave%(tamanho*2));
+    if(hash%2==0) hash++;
+    // Use o operador de módulo para garantir que o hash esteja no intervalo adequado
+    hash %= tamanho;
+
     return hash;
 }
 int Trata_Colisao(int hash, int tam_cadastrados, container* cadastrados){
     int retorno = hash;
     int hash_extra = hash;
     
-    while (cadastrados[retorno].ocupado != 0 && (retorno < tam_cadastrados * 2 || hash_extra >= 0)) {
-        if (retorno < tam_cadastrados * 2) {
-            retorno++;
-            if (cadastrados[retorno].ocupado == 0) break;
-        }
-        if (hash_extra >= 0) {
+    while ( retorno < tam_cadastrados || hash_extra > 0) {
+        if (retorno < ((tam_cadastrados)-1)) retorno++; 
+        if (cadastrados[retorno].ocupado == 0) break;
+                  
+        
+        if (hash_extra > 0) {
             hash_extra--;
             if (cadastrados[hash_extra].ocupado == 0) {
                 retorno = hash_extra;
@@ -42,21 +46,14 @@ int Trata_Colisao(int hash, int tam_cadastrados, container* cadastrados){
 
 int Busca(int hash, char valor_ent[12], int tam_cadastrados, container* cadastrados){
     int retorno, hash_extra=hash;
-    while((strcmp(cadastrados[hash].id_Container,valor_ent)!=0 && strcmp(cadastrados[hash_extra].id_Container,valor_ent)!=0)&& ((hash<(tam_cadastrados*2))||(hash_extra>0))){
-        if(hash<tam_cadastrados*2)hash++;
+    while((strcmp(cadastrados[hash].id_Container,valor_ent)!=0 && strcmp(cadastrados[hash_extra].id_Container,valor_ent)!=0)&& ((hash<(tam_cadastrados))||(hash_extra>0))){
+        if(hash<tam_cadastrados)hash++;
         if(hash_extra>0) hash_extra--;}
     (strcmp(cadastrados[hash].id_Container,valor_ent)==0)?(retorno=hash):(retorno = hash_extra);
     return retorno;
 }
 
 
-/*int busca(char id_Container[12]  , container* cadastrados){
-    int indice_Elemento=0;
-    while(strcmp(cadastrados[indice_Elemento].id_Container,id_Container)!=0){
-        indice_Elemento++;
-    }
-    return indice_Elemento;
-}*/
 int cnpj_Confere(char cnpj_Container[12] , container* container_Triagem, int indice_Elemento)
 {
     int comparacao = strcmp(container_Triagem[indice_Elemento].cnpj,cnpj_Container);
@@ -93,7 +90,7 @@ void Intercalar(container* saida, container* entrada, int32_t lim_Inferior, int3
     // enquanto houver elementos
     while (lim_Inf_Atual <= pivo && pivo_Sup <= lim_Superior) {
         // pular quem está nos conformes
-        for (; lim_Inf_Atual < pivo - 1; lim_Inf_Atual++)
+        for (; lim_Inf_Atual < pivo; lim_Inf_Atual++)
             if (entrada[lim_Inf_Atual].prioridade != 0)
                 break;
         for (; pivo_Sup < lim_Superior; pivo_Sup++)
@@ -175,22 +172,27 @@ int main(int argc, char* argv[]){
 
     int tam_Array_cadastro=0, tam_Array_triagem=0, index_Array_cadastro=0, index_Triagem=0;
     fscanf(input, "%d\n", &tam_Array_cadastro);
-    container* lista_Cadastro = (container*)calloc(tam_Array_cadastro*2,sizeof(container));
+    int tam_pot2 = 2;
+    while(tam_pot2<tam_Array_cadastro) tam_pot2*=2;
+    printf("tam = %d\n", tam_pot2);
+    container* lista_Cadastro = (container*)calloc(tam_pot2,sizeof(container));
     if (lista_Cadastro == NULL) {
         printf("ERRO!");
         return 1;
     }
     while(index_Array_cadastro<tam_Array_cadastro){
-        int chave_Hash;
-        chave_Hash = Hashify(lista_Cadastro[index_Array_cadastro].id_Container,tam_Array_cadastro);
-        if(lista_Cadastro[chave_Hash].ocupado!=0) chave_Hash = Trata_Colisao(chave_Hash,tam_Array_cadastro,lista_Cadastro);
-        fscanf(input, "%s %s %d\n",lista_Cadastro[index_Array_cadastro].id_Container, lista_Cadastro[index_Array_cadastro].cnpj, &(lista_Cadastro[index_Array_cadastro].peso));
+        int chave_Hash, peso;
+        char id[12], cnpj[19];
+        fscanf(input, "%s %s %d\n", id, cnpj, &peso);
+        chave_Hash = Hashify(id,tam_pot2);
+        if(lista_Cadastro[chave_Hash].ocupado!=0) chave_Hash = Trata_Colisao(chave_Hash,tam_pot2,lista_Cadastro);
+        strcpy(lista_Cadastro[chave_Hash].id_Container, id);
+        strcpy(lista_Cadastro[chave_Hash].cnpj, cnpj);
+        lista_Cadastro[chave_Hash].peso = peso;
         lista_Cadastro[chave_Hash].valor=chave_Hash; 
         lista_Cadastro[chave_Hash].ocupado=1;
         index_Array_cadastro++;
-        lista_Cadastro[chave_Hash].indice_Lista = index_Array_cadastro;
-        
-        
+        lista_Cadastro[chave_Hash].indice_Lista = index_Array_cadastro;   
     }
     fscanf(input, "%d\n", &tam_Array_triagem);
     container* lista_Triagem = (container*)malloc(sizeof(container)*tam_Array_triagem);
@@ -204,7 +206,7 @@ int main(int argc, char* argv[]){
     int chave_hash;
     fscanf(input, "%s %s %d\n", lista_Triagem[index_Triagem].id_Container, lista_Triagem[index_Triagem].cnpj, &(lista_Triagem[index_Triagem].peso));
     chave_hash = Hashify(lista_Triagem[index_Triagem].id_Container, tam_Array_triagem);
-    int index_cad = Busca(chave_hash, lista_Triagem[index_Triagem].id_Container, tam_Array_cadastro, lista_Cadastro);
+    int index_cad = Busca(chave_hash, lista_Triagem[index_Triagem].id_Container, tam_pot2, lista_Cadastro);
     lista_Triagem[index_Triagem].valor = index_cad;
     lista_Triagem[index_Triagem].indice_Lista = lista_Cadastro[index_cad].indice_Lista;
     lista_Triagem[index_Triagem].prioridade = cnpj_Confere(lista_Triagem[index_Triagem].cnpj, lista_Cadastro, index_cad);
@@ -216,7 +218,7 @@ int main(int argc, char* argv[]){
     mergesort(lista_Saida,lista_Triagem,lim_inf,lim_sup);
     int ind = 0;
     
-    while(lista_Triagem[ind].prioridade!=0){ (lista_Triagem[ind].prioridade==2)?fprintf(output,"%s: %s<->%s\n",lista_Triagem[ind].id_Container, lista_Cadastro[lista_Triagem[ind].valor].cnpj, lista_Triagem[ind].cnpj):fprintf(output,"%s: %dkg (%d%%)\n",lista_Triagem[ind].id_Container, lista_Triagem[ind].diferenca, lista_Triagem[ind].percentual_Excedido);
+    while(lista_Triagem[ind].prioridade!=0){ (lista_Triagem[ind].prioridade==2)?fprintf(output,"%d %s: %s<->%s\n",lista_Triagem[ind].valor,lista_Triagem[ind].id_Container, lista_Cadastro[lista_Triagem[ind].valor].cnpj, lista_Triagem[ind].cnpj):fprintf(output,"%s: %dkg (%d%%)\n",lista_Triagem[ind].id_Container, lista_Triagem[ind].diferenca, lista_Triagem[ind].percentual_Excedido);
 
     ind++;}
     
