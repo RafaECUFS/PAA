@@ -17,7 +17,6 @@ int Hashify(char* to_hash, int tamanho){
         hash = (hash * 13) + to_hash[posicao++];
         
     }
-    if(hash%2==0) hash++;
     // Use o operador de módulo para garantir que o hash esteja no intervalo adequado
     hash %= tamanho;
 
@@ -27,7 +26,7 @@ int Trata_Colisao(int hash, int tam_cadastrados, container* cadastrados){
     int retorno = hash;
     int hash_extra = hash;
     
-    while ( retorno < tam_cadastrados || hash_extra > 0) {
+    while ( cadastrados[retorno].ocupado != 0 || (cadastrados[hash_extra].ocupado != 0)) {
         if (retorno < ((tam_cadastrados)-1)) retorno++; 
         if (cadastrados[retorno].ocupado == 0) break;
                   
@@ -78,7 +77,7 @@ void Trocar(container* saida, container* entrada) {
 
     // Copiar id_Container e garantir terminação nula
     strcpy(saida->id_Container, entrada->id_Container);
-
+    printf("%s priorie\n",entrada->id_Container);
     // Copiar cnpj e garantir terminação nula
     strcpy(saida->cnpj, entrada->cnpj);
 }
@@ -116,10 +115,7 @@ void Intercalar(container* saida, container* entrada, int32_t lim_Inferior, int3
                     Trocar(&saida[indice++], &entrada[lim_Inf_Atual++]);
                 else if (entrada[lim_Inf_Atual].percentual_Excedido < entrada[pivo_Sup].percentual_Excedido)
                     Trocar(&saida[indice++], &entrada[pivo_Sup++]);
-                else if (entrada[lim_Inf_Atual].indice_Lista > entrada[pivo_Sup].indice_Lista) 
-                    Trocar(&saida[indice++], &entrada[pivo_Sup++]);    
-                else
-                    Trocar(&saida[indice++], &entrada[lim_Inf_Atual++]);
+                else (entrada[lim_Inf_Atual].indice_Lista > entrada[pivo_Sup].indice_Lista) ?Trocar(&saida[indice++], &entrada[pivo_Sup++]):Trocar(&saida[indice++], &entrada[lim_Inf_Atual++]);
                 
             }
         }
@@ -181,7 +177,7 @@ int main(int argc, char* argv[]){
         return 1;
     }
     while(index_Array_cadastro<tam_Array_cadastro){
-        int chave_Hash, peso;
+        int chave_Hash=0, peso=0;
         char id[12], cnpj[19];
         fscanf(input, "%s %s %d\n", id, cnpj, &peso);
         chave_Hash = Hashify(id,tam_pot2);
@@ -193,6 +189,7 @@ int main(int argc, char* argv[]){
         lista_Cadastro[chave_Hash].ocupado=1;
         index_Array_cadastro++;
         lista_Cadastro[chave_Hash].indice_Lista = index_Array_cadastro;   
+        
     }
     fscanf(input, "%d\n", &tam_Array_triagem);
     container* lista_Triagem = (container*)malloc(sizeof(container)*tam_Array_triagem);
@@ -210,15 +207,19 @@ int main(int argc, char* argv[]){
     lista_Triagem[index_Triagem].valor = index_cad;
     lista_Triagem[index_Triagem].indice_Lista = lista_Cadastro[index_cad].indice_Lista;
     lista_Triagem[index_Triagem].prioridade = cnpj_Confere(lista_Triagem[index_Triagem].cnpj, lista_Cadastro, index_cad);
+    lista_Triagem[index_Triagem].ocupado = 1;
     Calcula_excedente(&lista_Cadastro[index_cad], &lista_Triagem[index_Triagem]);
-
+    
     index_Triagem++;
-}
-
+   }
+    
     mergesort(lista_Saida,lista_Triagem,lim_inf,lim_sup);
     int ind = 0;
     
-    while(lista_Triagem[ind].prioridade!=0){ (lista_Triagem[ind].prioridade==2)?fprintf(output,"%d %s: %s<->%s\n",lista_Triagem[ind].valor,lista_Triagem[ind].id_Container, lista_Cadastro[lista_Triagem[ind].valor].cnpj, lista_Triagem[ind].cnpj):fprintf(output,"%s: %dkg (%d%%)\n",lista_Triagem[ind].id_Container, lista_Triagem[ind].diferenca, lista_Triagem[ind].percentual_Excedido);
+    while(ind<index_Triagem){ 
+        
+        
+        if(lista_Triagem[ind].prioridade==2)fprintf(output,"%d %s: %s<->%s\n",lista_Triagem[ind].valor,lista_Triagem[ind].id_Container, lista_Cadastro[lista_Triagem[ind].valor].cnpj, lista_Triagem[ind].cnpj);else if(lista_Triagem[ind].prioridade==1) fprintf(output,"%s: %dkg (%d%%)\n",lista_Triagem[ind].id_Container, lista_Triagem[ind].diferenca, lista_Triagem[ind].percentual_Excedido);
 
     ind++;}
     
