@@ -43,14 +43,28 @@ int Trata_Colisao(int hash, int tam_cadastrados, container* cadastrados){
 }
 
 
-int Busca(int hash, char valor_ent[12], int tam_cadastrados, container* cadastrados){
-    int retorno, hash_extra=hash;
-    while((strcmp(cadastrados[hash].id_Container,valor_ent)!=0 && strcmp(cadastrados[hash_extra].id_Container,valor_ent)!=0)&& ((hash<(tam_cadastrados))||(hash_extra>0))){
-        if(hash<tam_cadastrados)hash++;
-        if(hash_extra>0) hash_extra--;}
-    (strcmp(cadastrados[hash].id_Container,valor_ent)==0)?(retorno=hash):(retorno = hash_extra);
+int Busca(int hash, char valor_ent[12], int tam_cadastrados, container* cadastrados) {
+    int retorno = -1;  // Valor padrão indicando que a busca não encontrou correspondência
+    int hash_extra = hash;
+
+    // Condições do loop ajustadas para evitar acessos fora dos limites
+    while ((hash < tam_cadastrados - 1 || hash_extra >= 1) &&
+           (strcmp(cadastrados[hash].id_Container, valor_ent) != 0 &&
+            strcmp(cadastrados[hash_extra].id_Container, valor_ent) != 0)) {
+        
+        if (hash < tam_cadastrados - 1) hash++;
+        if (hash_extra >= 1) hash_extra--;
+    }
+
+    // Condição de saída do loop revisada
+    if (hash < tam_cadastrados && hash_extra >= 0) {
+        // Verifica se encontrou correspondência e atualiza o retorno
+        retorno = (strcmp(cadastrados[hash].id_Container, valor_ent) == 0) ? hash : hash_extra;
+    }
+
     return retorno;
 }
+
 
 
 int cnpj_Confere(char cnpj_Container[12] , container* container_Triagem, int indice_Elemento)
@@ -89,52 +103,40 @@ void Intercalar(container* saida, container* entrada, int32_t lim_Inferior, int3
     // enquanto houver elementos
     while (lim_Inf_Atual <= pivo && pivo_Sup <= lim_Superior) {
         // pular quem está nos conformes
-        for (; lim_Inf_Atual < pivo; lim_Inf_Atual++)
-            if (entrada[lim_Inf_Atual].prioridade != 0)
-                break;
-        for (; pivo_Sup < lim_Superior; pivo_Sup++)
-            if (entrada[pivo_Sup].prioridade != 0)
-                break;
+        while (lim_Inf_Atual <= pivo && entrada[lim_Inf_Atual].prioridade == 0) {
+            lim_Inf_Atual++;
+        }
+
+        while (pivo_Sup <= lim_Superior && entrada[pivo_Sup].prioridade == 0) {
+            pivo_Sup++;
+        }
 
         // comparação maior prioridade
-        if (entrada[pivo_Sup].prioridade < entrada[lim_Inf_Atual].prioridade)
-            Trocar(&saida[indice++], &entrada[lim_Inf_Atual++]);
-        else if (entrada[pivo_Sup].prioridade > entrada[lim_Inf_Atual].prioridade)
-            Trocar(&saida[indice++], &entrada[pivo_Sup++]);
-        else if (entrada[pivo_Sup].prioridade == entrada[lim_Inf_Atual].prioridade) {
-            // prioridade igual
-            if (entrada[lim_Inf_Atual].prioridade == 2 && entrada[pivo_Sup].prioridade == 2) {
-                // desempate pelo índice da lista
-                if (entrada[lim_Inf_Atual].indice_Lista < entrada[pivo_Sup].indice_Lista)
-                    Trocar(&saida[indice++], &entrada[lim_Inf_Atual++]);
-                else
-                    Trocar(&saida[indice++], &entrada[pivo_Sup++]);
-            } else if (entrada[lim_Inf_Atual].prioridade == 1 && entrada[pivo_Sup].prioridade == 1){
-                // prioridade igual e não é 2
-                if (entrada[lim_Inf_Atual].percentual_Excedido > entrada[pivo_Sup].percentual_Excedido)
-                    Trocar(&saida[indice++], &entrada[lim_Inf_Atual++]);
-                else if (entrada[lim_Inf_Atual].percentual_Excedido < entrada[pivo_Sup].percentual_Excedido)
-                    Trocar(&saida[indice++], &entrada[pivo_Sup++]);
-                else (entrada[lim_Inf_Atual].indice_Lista > entrada[pivo_Sup].indice_Lista) ?Trocar(&saida[indice++], &entrada[pivo_Sup++]):Trocar(&saida[indice++], &entrada[lim_Inf_Atual++]);
-                
+        if (lim_Inf_Atual <= pivo && pivo_Sup <= lim_Superior) {
+            if (entrada[pivo_Sup].prioridade < entrada[lim_Inf_Atual].prioridade ||
+                (entrada[pivo_Sup].prioridade == entrada[lim_Inf_Atual].prioridade &&
+                 (entrada[pivo_Sup].prioridade == 2 ? (entrada[pivo_Sup].indice_Lista > entrada[lim_Inf_Atual].indice_Lista) :
+                                                      (entrada[pivo_Sup].percentual_Excedido > entrada[lim_Inf_Atual].percentual_Excedido)))) {
+                Trocar(&saida[indice++], &entrada[lim_Inf_Atual++]);
+            } else {
+                Trocar(&saida[indice++], &entrada[pivo_Sup++]);
             }
         }
     }
 
     // copiar o restante
-    if (lim_Inferior > pivo) {
-        int restantes = lim_Superior - pivo_Sup + 1;
-        while ((restantes--) > 0)
-            Trocar(&saida[indice++], &entrada[pivo_Sup++]);
-    } else if(pivo_Sup>lim_Superior) {
-        int restantes = pivo - lim_Inf_Atual + 1;
-        while ((restantes--) > 0)
-            Trocar(&saida[indice++], &entrada[lim_Inf_Atual++]);
+    while (lim_Inf_Atual <= pivo) {
+        Trocar(&saida[indice++], &entrada[lim_Inf_Atual++]);
+    }
+
+    while (pivo_Sup <= lim_Superior) {
+        Trocar(&saida[indice++], &entrada[pivo_Sup++]);
     }
 
     // copiar de volta para entrada
     memcpy(&entrada[lim_Inferior], &saida[lim_Inferior], sizeof(container) * (lim_Superior - lim_Inferior + 1));
 }
+
 
 
 //mergesort recursivo
@@ -200,9 +202,9 @@ int main(int argc, char* argv[]){
         return 1;
     }
    while (index_Triagem < tam_Array_triagem) {
-    int chave_hash;
+    
     fscanf(input, "%s %s %d\n", lista_Triagem[index_Triagem].id_Container, lista_Triagem[index_Triagem].cnpj, &(lista_Triagem[index_Triagem].peso));
-    chave_hash = Hashify(lista_Triagem[index_Triagem].id_Container, tam_Array_triagem);
+    int chave_hash = Hashify(lista_Triagem[index_Triagem].id_Container, tam_pot2);
     int index_cad = Busca(chave_hash, lista_Triagem[index_Triagem].id_Container, tam_pot2, lista_Cadastro);
     lista_Triagem[index_Triagem].valor = index_cad;
     lista_Triagem[index_Triagem].indice_Lista = lista_Cadastro[index_cad].indice_Lista;
@@ -219,7 +221,7 @@ int main(int argc, char* argv[]){
     while(ind<index_Triagem){ 
         
         
-        if(lista_Triagem[ind].prioridade==2)fprintf(output,"%d %s: %s<->%s\n",lista_Triagem[ind].valor,lista_Triagem[ind].id_Container, lista_Cadastro[lista_Triagem[ind].valor].cnpj, lista_Triagem[ind].cnpj);else if(lista_Triagem[ind].prioridade==1) fprintf(output,"%s: %dkg (%d%%)\n",lista_Triagem[ind].id_Container, lista_Triagem[ind].diferenca, lista_Triagem[ind].percentual_Excedido);
+        if(lista_Triagem[ind].prioridade==2)fprintf(output,"%s: %s<->%s\n",lista_Triagem[ind].id_Container, lista_Cadastro[lista_Triagem[ind].valor].cnpj, lista_Triagem[ind].cnpj);else if(lista_Triagem[ind].prioridade==1) fprintf(output,"%s: %dkg (%d%%)\n",lista_Triagem[ind].id_Container, lista_Triagem[ind].diferenca, lista_Triagem[ind].percentual_Excedido);
 
     ind++;}
     
