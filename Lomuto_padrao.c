@@ -32,10 +32,10 @@ void Trocar_tipo(tipo* array, size_t indiceA, size_t indiceB) {
 int32_t Lom_STD(int32_t* array, int32_t ind_Menor, int32_t ind_Maior, int32_t *num_Trocas) {
     int32_t pivo = array[ind_Maior], ind_Half1 = ind_Menor - 1, ind_Half2 = ind_Menor;
 
-    for(; ind_Half2 < ind_Maior; ind_Half2++) {
+    for(ind_Half2 = ind_Menor; ind_Half2 < ind_Maior; ind_Half2++) {
         if(array[ind_Half2] <= pivo) {
             Trocar(&array[++ind_Half1], &array[ind_Half2]);
-            (*num_Trocas)++; // <-- note o asterisco!
+            (*num_Trocas)++; 
         }
     }
 
@@ -43,17 +43,17 @@ int32_t Lom_STD(int32_t* array, int32_t ind_Menor, int32_t ind_Maior, int32_t *n
     (*num_Trocas)++;
 
     return ind_Half1;
-}
+} //erro, sort com operaçẽos de menos
 void quicksortLomuto(int32_t* array, int32_t ind_Menor, int32_t ind_Maior, int32_t* num_Trocas) {
     if (ind_Menor < ind_Maior) {
         int32_t partitionIndex = Lom_STD(array, ind_Menor, ind_Maior, num_Trocas);
 
-        quicksortLomuto(array, ind_Menor, partitionIndex, num_Trocas);
+        quicksortLomuto(array, ind_Menor, partitionIndex-1, num_Trocas);
         quicksortLomuto(array, partitionIndex + 1, ind_Maior, num_Trocas);
     }
 }
 
-void processarVetor(int32_t* vetor, int32_t tamanho, FILE* output, int32_t linha_impressa) {
+void processarVetor(int32_t* vetor, int32_t tamanho, FILE* output/*, int32_t linha_impressa*/) {
     tipo* lista_variantes = (tipo*)calloc(6,sizeof(tipo));
     // Cópias dinamicamente alocadas do vetor
     int32_t* copia1 = malloc(sizeof(int32_t) * tamanho);
@@ -65,7 +65,7 @@ void processarVetor(int32_t* vetor, int32_t tamanho, FILE* output, int32_t linha
 
     if (copia1 == NULL)// || copia2 == NULL || copia3 == NULL || copia4 == NULL || copia5 == NULL || copia6 == NULL) {
     {   // Lidar com erro de alocação de memória, se necessário
-        fprintf(stderr, "Erro de alocação de memória\n");
+        perror("Erro ao alocar memória para copia1");
         exit(EXIT_FAILURE);
     }
 
@@ -127,30 +127,36 @@ void processarVetor(int32_t* vetor, int32_t tamanho, FILE* output, int32_t linha
 
 }
 
-void converte_string_int(char* string, int32_t array_nums[]) {
+void converte_string_int(const char *string, int32_t *array_nums, int32_t tam_array) {
     int32_t index_array_num = 0;
-    char num_preconvert[16];  // buffer temporário para cada número
-    int i = 0, j = 0;
+    char num_preconvert[32];
+    int j = 0;
 
-    while (string[i] != '\0') {
-        if (string[i] != ' ' && string[i] != '\n') {
-            // adiciona caractere ao buffer
-            num_preconvert[j++] = string[i];
-        } else if (j > 0) {
-            // finaliza número e converte
-            num_preconvert[j] = '\0';
-            array_nums[index_array_num++] = atoi(num_preconvert);
-            j = 0; // reinicia o buffer
+    for (int i = 0; string[i] != '\0'; i++) {
+        char c = string[i];
+
+        // Se for parte de um número (dígito ou sinal)
+        if ((c >= '0' && c <= '9') || c == '-' || c == '+') {
+            if (j < (int)(sizeof(num_preconvert) - 1))
+                num_preconvert[j++] = c;
         }
-        i++;
+        // Se for separador (espaço, \n, \r, etc.)
+        else if (j > 0) {
+            num_preconvert[j] = '\0';
+            if (index_array_num < tam_array)
+                array_nums[index_array_num++] = atoi(num_preconvert);
+            j = 0;
+        }
     }
 
-    // último número (caso a string não termine com espaço)
-    if (j > 0) {
+    // Trata o último número (caso a linha não termine com separador)
+    if (j > 0 && index_array_num < tam_array) {
         num_preconvert[j] = '\0';
         array_nums[index_array_num++] = atoi(num_preconvert);
     }
 }
+
+
 
 //Incompleto por agora
 int main(int argc, char* argv[]) {
@@ -167,5 +173,16 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     uint32_t num_linhas,tam_array,indice_array_num,num_trocas=0;
-    int32_t* numeros = (int32_t*)calloc(tam_array,sizeof(int32_t));
+    int32_t* numeros; 
+    char buffer[100];
     fscanf(input,"%d\n",&num_linhas);
+
+    for(int linhaAtual=0; linhaAtual<num_linhas; linhaAtual++)
+    {
+        fscanf(input,"%d\n",&tam_array);
+        numeros = (int32_t*)calloc(tam_array,sizeof(int32_t));
+        fgets(buffer, sizeof(buffer), input);
+        converte_string_int(buffer, numeros, tam_array);
+        processarVetor(numeros,tam_array,output);
+    }
+}
