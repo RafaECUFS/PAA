@@ -1,0 +1,22 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "-g",                 // adiciona informações de debug
+                "merge.c",            // seu arquivo fonte
+                "-o",
+                "outDebug",           // nome do executável
+                "-lm"                 // necessário para round()
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}

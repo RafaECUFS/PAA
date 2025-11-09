@@ -6,15 +6,15 @@
 
 typedef struct dados_Container {
     int peso, indice_Lista, valor, ocupado;
-    char id_Container[13];  // espaço para '\0'
-    char cnpj[20];          // espaço para '\0'
+    char id_Container[12];
+    char cnpj[19];
     int prioridade, percentual_Excedido, diferenca;
 } container;
 
 // DJB2 hash
 unsigned int Hashify(char* str, int tamanho) {
     unsigned long hash = 5381;
-    for (int i = 0; i < 12 && str[i] != '\0'; i++) {
+    for (int i = 0; i < 12; i++) {
         hash = ((hash << 5) + hash) + (unsigned char)str[i];
     }
     return hash % tamanho;
@@ -31,7 +31,7 @@ int Trata_Colisao(int hash, int tam, container* cadastrados) {
 }
 
 // Busca segura
-int Busca(int hash, char valor_ent[13], int tam, container* cadastrados) {
+int Busca(int hash, char valor_ent[12], int tam, container* cadastrados) {
     int i = 0, pos = hash;
     while (i < tam) {
         if (cadastrados[pos].ocupado != 0 &&
@@ -43,13 +43,10 @@ int Busca(int hash, char valor_ent[13], int tam, container* cadastrados) {
     return -1;
 }
 
-// Confere CNPJ
-int cnpj_Confere(char cnpj_Container[20], container* container_Triagem, int indice_Elemento) {
-    int comparacao = strcmp(container_Triagem[indice_Elemento].cnpj, cnpj_Container);
-    return (comparacao == 0) ? 0 : 2;
+int cnpj_Confere(char cnpj_Container[19], container* container_Triagem, int indice_Elemento) {
+    return (strcmp(container_Triagem[indice_Elemento].cnpj, cnpj_Container) == 0) ? 0 : 2;
 }
 
-// Calcula excesso de peso
 void Calcula_excedente(container* cadastrado, container* triagem) {
     int diferenca_peso = triagem->peso - cadastrado->peso;
     triagem->diferenca = diferenca_peso;
@@ -61,7 +58,6 @@ void Calcula_excedente(container* cadastrado, container* triagem) {
         triagem->prioridade = 1;
 }
 
-// Copia de container
 void Trocar(container* saida, container* entrada) {
     saida->indice_Lista = entrada->indice_Lista;
     saida->peso = entrada->peso;
@@ -69,13 +65,12 @@ void Trocar(container* saida, container* entrada) {
     saida->prioridade = entrada->prioridade;
     saida->diferenca = entrada->diferenca;
     saida->valor = entrada->valor;
-    strncpy(saida->id_Container, entrada->id_Container, 12);
-    saida->id_Container[12] = '\0';
-    strncpy(saida->cnpj, entrada->cnpj, 19);
-    saida->cnpj[19] = '\0';
+
+    // cópias seguras de strings
+    snprintf(saida->id_Container, sizeof(saida->id_Container), "%s", entrada->id_Container);
+    snprintf(saida->cnpj, sizeof(saida->cnpj), "%s", entrada->cnpj);
 }
 
-// Intercalação para mergesort
 void Intercalar(container* saida, container* entrada, int32_t lim_Inferior, int32_t pivo, int32_t lim_Superior) {
     int32_t i = lim_Inferior, j = pivo + 1, k = lim_Inferior;
 
@@ -84,26 +79,23 @@ void Intercalar(container* saida, container* entrada, int32_t lim_Inferior, int3
         container *right = &entrada[j];
         int cond = 0;
 
-        // prioridade 2 primeiro
         if (left->prioridade == 2 && right->prioridade != 2) cond = 1;
         else if (left->prioridade != 2 && right->prioridade == 2) cond = 0;
-        else if (left->prioridade == 2 && right->prioridade == 2) cond = (left->indice_Lista <= right->indice_Lista);
-        else if (left->prioridade == 1 && right->prioridade == 1) cond = (left->percentual_Excedido >= right->percentual_Excedido);
+        else if (left->prioridade == 2 && right->prioridade == 2)
+            cond = (left->indice_Lista <= right->indice_Lista);
+        else if (left->prioridade == 1 && right->prioridade == 1)
+            cond = (left->percentual_Excedido >= right->percentual_Excedido);
         else cond = 1;
 
-        if (cond) {
-            Trocar(&saida[k++], left);
-            i++;
-        } else {
-            Trocar(&saida[k++], right);
-            j++;
-        }
+        if (cond) Trocar(&saida[k++], left), i++;
+        else Trocar(&saida[k++], right), j++;
     }
 
     while (i <= pivo) Trocar(&saida[k++], &entrada[i++]);
     while (j <= lim_Superior) Trocar(&saida[k++], &entrada[j++]);
 
-    memcpy(&entrada[lim_Inferior], &saida[lim_Inferior], sizeof(container) * (lim_Superior - lim_Inferior + 1));
+    memcpy(&entrada[lim_Inferior], &saida[lim_Inferior],
+           sizeof(container) * (lim_Superior - lim_Inferior + 1));
 }
 
 // mergesort recursivo
@@ -117,6 +109,8 @@ void mergesort(container* saida, container* entrada, int32_t lim_Inferior, int32
 }
 
 int main(int argc, char* argv[]) {
+    if (argc < 3) { printf("Uso: %s <input> <output>\n", argv[0]); return 1; }
+
     FILE* input = fopen(argv[1], "r");
     if (!input) { printf("ERRO!a\n"); return 0; }
     FILE* output = fopen(argv[2], "w");
@@ -129,23 +123,21 @@ int main(int argc, char* argv[]) {
     while (tam_pot2 < tam_Array_cadastro) tam_pot2 *= 3;
 
     container* lista_Cadastro = (container*)calloc(tam_pot2, sizeof(container));
-    container* lista_Triagem = NULL;
-    container* lista_Saida = NULL;
+    if (!lista_Cadastro) { printf("ERRO!c\n"); return 1; }
 
     // leitura do cadastro
     for (int i = 0; i < tam_Array_cadastro; i++) {
-        char id[13], cnpj[20];
+        char id[12], cnpj[19];
         int peso;
-        fscanf(input, "%12s %19s %d\n", id, cnpj, &peso);
-        id[12] = '\0'; cnpj[19] = '\0';
+        fscanf(input, "%s %s %d\n", id, cnpj, &peso);
         int chave_Hash = Hashify(id, tam_pot2);
         if (lista_Cadastro[chave_Hash].ocupado != 0)
             chave_Hash = Trata_Colisao(chave_Hash, tam_pot2, lista_Cadastro);
 
-        strncpy(lista_Cadastro[chave_Hash].id_Container, id, 12);
-        lista_Cadastro[chave_Hash].id_Container[12] = '\0';
-        strncpy(lista_Cadastro[chave_Hash].cnpj, cnpj, 19);
-        lista_Cadastro[chave_Hash].cnpj[19] = '\0';
+        snprintf(lista_Cadastro[chave_Hash].id_Container,
+                 sizeof(lista_Cadastro[chave_Hash].id_Container), "%s", id);
+        snprintf(lista_Cadastro[chave_Hash].cnpj,
+                 sizeof(lista_Cadastro[chave_Hash].cnpj), "%s", cnpj);
         lista_Cadastro[chave_Hash].peso = peso;
         lista_Cadastro[chave_Hash].valor = chave_Hash;
         lista_Cadastro[chave_Hash].ocupado = 1;
@@ -153,41 +145,45 @@ int main(int argc, char* argv[]) {
     }
 
     fscanf(input, "%d\n", &tam_Array_triagem);
-    lista_Triagem = (container*)malloc(sizeof(container) * tam_Array_triagem);
-    lista_Saida = (container*)malloc(sizeof(container) * tam_Array_triagem);
+    container* lista_Triagem = (container*)malloc(sizeof(container) * tam_Array_triagem);
+    container* lista_Saida = (container*)malloc(sizeof(container) * tam_Array_triagem);
+    if (!lista_Triagem || !lista_Saida) { printf("ERRO!d\n"); return 1; }
 
     // leitura da triagem
     for (int i = 0; i < tam_Array_triagem; i++) {
-        fscanf(input, "%12s %19s %d\n",
-               lista_Triagem[i].id_Container,
-               lista_Triagem[i].cnpj,
-               &lista_Triagem[i].peso);
-        lista_Triagem[i].id_Container[12] = '\0';
-        lista_Triagem[i].cnpj[19] = '\0';
+        char id[12], cnpj[19];
+        int peso;
+        fscanf(input, "%s %s %d\n", id, cnpj, &peso);
 
-        int chave_hash = Hashify(lista_Triagem[i].id_Container, tam_pot2);
-        int index_cad = Busca(chave_hash, lista_Triagem[i].id_Container, tam_pot2, lista_Cadastro);
+        snprintf(lista_Triagem[i].id_Container, sizeof(lista_Triagem[i].id_Container), "%s", id);
+        snprintf(lista_Triagem[i].cnpj, sizeof(lista_Triagem[i].cnpj), "%s", cnpj);
+        lista_Triagem[i].peso = peso;
+
+        int chave_hash = Hashify(id, tam_pot2);
+        int index_cad = Busca(chave_hash, id, tam_pot2, lista_Cadastro);
 
         if (index_cad != -1) { // existe no cadastro
             lista_Triagem[i].valor = index_cad;
             lista_Triagem[i].indice_Lista = lista_Cadastro[index_cad].indice_Lista;
-            lista_Triagem[i].prioridade = cnpj_Confere(lista_Triagem[i].cnpj, lista_Cadastro, index_cad);
+            lista_Triagem[i].prioridade = cnpj_Confere(cnpj, lista_Cadastro, index_cad);
+            lista_Triagem[i].ocupado = 1;
             Calcula_excedente(&lista_Cadastro[index_cad], &lista_Triagem[i]);
         } else { // não existe
             lista_Triagem[i].valor = -1;
             lista_Triagem[i].indice_Lista = -1;
             lista_Triagem[i].prioridade = 0;
+            lista_Triagem[i].ocupado = 1;
             lista_Triagem[i].diferenca = 0;
             lista_Triagem[i].percentual_Excedido = 0;
         }
     }
 
+    // ordenação
     mergesort(lista_Saida, lista_Triagem, 0, tam_Array_triagem - 1);
 
-    // impressão: apenas divergências
+    // impressão somente divergências
     for (int i = 0; i < tam_Array_triagem; i++) {
-        if (lista_Triagem[i].valor != -1 &&
-            (lista_Triagem[i].prioridade == 2 || lista_Triagem[i].prioridade == 1)) {
+        if (lista_Triagem[i].valor != -1) {
             if (lista_Triagem[i].prioridade == 2) {
                 fprintf(output, "%s: %s<->%s\n",
                         lista_Triagem[i].id_Container,
@@ -207,6 +203,5 @@ int main(int argc, char* argv[]) {
     free(lista_Cadastro);
     free(lista_Triagem);
     free(lista_Saida);
-
     return 0;
 }
