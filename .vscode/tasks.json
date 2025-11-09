@@ -1,22 +1,25 @@
 {
     "version": "2.0.0",
     "tasks": [
-        {
-            "label": "build",
-            "type": "shell",
-            "command": "gcc",
-            "args": [
-                "-g",                 // adiciona informações de debug
-                "merge.c",            // seu arquivo fonte
-                "-o",
-                "outDebug",           // nome do executável
-                "-lm"                 // necessário para round()
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "problemMatcher": ["$gcc"]
+      {
+        "label": "Build QSort",
+        "type": "shell",
+        "command": "gcc",
+        "args": [
+          "-g",                        // símbolos de debug
+          "-O0",                       // desativa otimizações para depurar melhor
+          "hoare_random.c",            // substitua pelos seus .c
+          "-o", "qsexe"
+        ],
+        "options": {
+          "cwd": "/home/rafa-ubuntu/PAA/QSort"
+        },
+        "problemMatcher": ["$gcc"],
+        "group": {
+          "kind": "build",
+          "isDefault": true
         }
+      }
     ]
-}
+  }
+  

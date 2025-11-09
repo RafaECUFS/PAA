@@ -2,15 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "C/C++ Runner: Debug Session",
+      "name": "Debug QSort (GDB)",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${workspaceFolder}/QSort/qsexe",
-      "args": ["${workspaceFolder}/QSort/inpqs.txt","${workspaceFolder}/QSort/mergeout.txt"],
+      "program": "/home/rafa-ubuntu/PAA/QSort/qsexe",
+      "args": ["inpqs.txt", "mergeout.txt"],
       "stopAtEntry": false,
-      "cwd": "${workspaceFolder}",
+      "cwd": "/home/rafa-ubuntu/PAA/QSort",
       "externalConsole": true,
-      "preLaunchTask": "build",
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb",
       "setupCommands": [
@@ -19,7 +18,8 @@
           "text": "-enable-pretty-printing",
           "ignoreFailures": true
         }
-      ]
+      ],
+      "preLaunchTask": "Build QSort"
     }
   ]
 }
